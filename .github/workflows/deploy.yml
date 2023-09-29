@@ -28,19 +28,18 @@ jobs:
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: dist
-        path: ./dist
+        name: my-artifact
+        path: ./
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
     steps:
     - name: Download Build Artifacts
       uses: actions/download-artifact@v2
       with:
-        name: dist
-        path: dist
+        name: my-artifact
+        path: ./
 
     - name: SSH and deploy to server
       env:
@@ -60,7 +59,7 @@ jobs:
         echo "Version: $VERSION"
 
         # Copy artifacts to server using SCP
-        scp -o StrictHostKeyChecking=no -i deploy_key -r ./dist/ $USERNAME@$HOST:$DIST_LOCATION/$VERSION
+        scp -o StrictHostKeyChecking=no -i deploy_key -r ./ $USERNAME@$HOST:$DIST_LOCATION/$VERSION/
 
         # Create a symbolic link to the latest version
         ssh -i deploy_key $USERNAME@$HOST "ln -sfn $DIST_LOCATION/$VERSION $DIST_LOCATION/dist"
