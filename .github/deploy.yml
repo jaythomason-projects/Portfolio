@@ -1,0 +1,66 @@
+name: Deploy web app to live environment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'
+
+    - name: Install Dependencies
+      run: npm install
+
+    - name: Build
+      run: npm run build
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: dist
+        path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download Build Artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: dist
+        path: dist
+
+    - name: SSH and deploy to server
+      env:
+        DIST_LOCATION: ${{ env.DIST_LOCATION }}
+        USERNAME: ${{ env.USERNAME }}
+        HOST: ${{ env.HOST }}
+        SSH_KEY: ${{ secrets.DEPLOY_KEY }}
+      run: |
+        # Start SSH agent and add deploy key
+        eval $(ssh-agent -s)
+        echo "${{ secrets.DEPLOY_KEY }}" > deploy_key
+        chmod 600 deploy_key
+        ssh-add deploy_key
+
+        # Print version number
+        VERSION="dist_$(echo '${{ github.sha }}' | cut -c 1-6)"
+        echo "Version: $VERSION"
+
+        # Copy artifacts to server using SCP
+        scp -o StrictHostKeyChecking=no -i deploy_key -r ./dist/ $USERNAME@$HOST:$DIST_LOCATION/$VERSION
+
+        # Create a symbolic link to the latest version
+        ssh -i deploy_key $USERNAME@$HOST "ln -sfn $DIST_LOCATION/$VERSION $DIST_LOCATION/dist"

@@ -1,0 +1,49 @@
+.bin, .failed-project {
+    position: absolute;
+    img {
+      max-width: 100%;
+    }
+  }
+  
+  // Bottom center object styles
+  .bin {
+    left: 50%;
+    bottom: 5%;
+    transform: translateX(-50%);
+  }
+  
+  // Falling object styles and animation
+  .failed-project {
+    top: -15%;
+    right: calc(42.5%); // Adjust to make it center right
+    width: 15%;
+    animation: fall 2s cubic-bezier(0.75, 0.2, 0.9, 0.2) infinite, moveHorizontally 2s linear infinite, rotate 2s linear infinite;
+  }
+  
+  // Keyframes
+  @keyframes fall {
+    0% {
+      top: -15%;
+    }
+    100% {
+      top: calc(80%); // Adjust to stop at center
+    }
+  }
+  
+  @keyframes moveHorizontally {
+    0% {
+      right: 100%;
+    }
+    100% {
+      right: calc(42.5%); // Adjust to make it center right
+    }
+  }
+  
+  @keyframes rotate {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
