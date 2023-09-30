@@ -3,11 +3,11 @@ name: Deploy web app to live environment
 on:
   push:
     branches:
-      - dev
+      - main
   workflow_dispatch:
 
 jobs:
-  build:
+  build_and_deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,28 +25,11 @@ jobs:
     - name: Build
       run: npm run build
 
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: my-artifact
-        path: ./
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Download Build Artifacts
-      uses: actions/download-artifact@v2
-      with:
-        name: my-artifact
-        path: ./
-
     - name: SSH and deploy to server
       env:
-        DIST_LOCATION: ${{ env.DIST_LOCATION }}
-        USERNAME: ${{ env.USERNAME }}
-        HOST: ${{ env.HOST }}
-        SSH_KEY: ${{ secrets.DEPLOY_KEY }}
+        DIST_LOCATION: "/opt/portfolio"
+        HOST: ${{ secrets.HOST }}
+        USERNAME: ${{ secrets.USERNAME }}
       run: |
         # Start SSH agent and add deploy key
         eval $(ssh-agent -s)
@@ -54,12 +37,13 @@ jobs:
         chmod 600 deploy_key
         ssh-add deploy_key
 
-        # Print version number
+        # Create a unique version number for this build
         VERSION="dist_$(echo '${{ github.sha }}' | cut -c 1-6)"
-        echo "Version: $VERSION"
 
         # Copy artifacts to server using SCP
-        scp -o StrictHostKeyChecking=no -i deploy_key -r ./ $USERNAME@$HOST:$DIST_LOCATION/$VERSION/
+        echo "Copying files to $DIST_LOCATION/$VERSION/ on $HOST"
+        rsync -av -e "ssh -i deploy_key -o StrictHostKeyChecking=no" ./ $USERNAME@$HOST:$DIST_LOCATION/$VERSION/
 
         # Create a symbolic link to the latest version
+        echo "Creating symbolic link from $DIST_LOCATION/$VERSION to $DIST_LOCATION/dist"
         ssh -i deploy_key $USERNAME@$HOST "ln -sfn $DIST_LOCATION/$VERSION $DIST_LOCATION/dist"
