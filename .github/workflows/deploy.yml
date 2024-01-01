@@ -12,38 +12,19 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
       with:
-        node-version: '14'
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Install Dependencies
-      run: npm install
-
-    - name: Build
-      run: npm run build
-
-    - name: SSH and deploy to server
-      env:
-        DIST_LOCATION: "/opt/portfolio"
-        HOST: ${{ secrets.HOST }}
-        USERNAME: ${{ secrets.USERNAME }}
-      run: |
-        # Start SSH agent and add deploy key
-        eval $(ssh-agent -s)
-        echo "${{ secrets.DEPLOY_KEY }}" > deploy_key
-        chmod 600 deploy_key
-        ssh-add deploy_key
-
-        # Create a unique version number for this build
-        VERSION="dist_$(echo '${{ github.sha }}' | cut -c 1-6)"
-
-        # Copy artifacts to server using SCP
-        echo "Copying files to $DIST_LOCATION/$VERSION/ on $HOST"
-        rsync -av -e "ssh -i deploy_key -o StrictHostKeyChecking=no" ./ $USERNAME@$HOST:$DIST_LOCATION/$VERSION/
-
-        # Create a symbolic link to the latest version
-        echo "Creating symbolic link from $DIST_LOCATION/$VERSION to $DIST_LOCATION/dist"
-        ssh -i deploy_key $USERNAME@$HOST "ln -sfn $DIST_LOCATION/$VERSION $DIST_LOCATION/dist"
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}
+          ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }}:${{ github.sha }}
