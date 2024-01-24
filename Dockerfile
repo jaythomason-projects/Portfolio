@@ -16,4 +16,6 @@ ENV PORT=5000
 
 EXPOSE 5000
 
-CMD [ "serve", "-s", "dist" ]
+CMD [ "serve", "-s", "/app" ] 
+# -s flag means serve in SPA mode
+# /app" is the path of the build directory, where the app is served
